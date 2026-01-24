@@ -37,10 +37,10 @@ Object.assign(ItemStack.prototype, {
     getComponentById<T extends keyof CompId>(key: T) {
         return (this as ItemStack).getComponent(key);
     },
-    getColorLoreUtil(){
+    getColorLoreUtil() {
         return new ExColorLoreUtil(this as ItemStack);
     },
-    getLoreUtil(){
+    getLoreUtil() {
         return new ExLoreUtil(this as ItemStack);
     },
     isWillBeRemoved: false

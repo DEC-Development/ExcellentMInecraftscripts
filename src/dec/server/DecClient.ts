@@ -1,4 +1,4 @@
-import { EntityDamageCause, GameMode, ItemStack, Player, ItemDurabilityComponent, world } from '@minecraft/server';
+import { EntityDamageCause, GameMode, ItemStack, Player, ItemDurabilityComponent, world, EquipmentSlot, system } from '@minecraft/server';
 import ExGameClient from "../../modules/exmc/server/ExGameClient.js";
 import ExGameServer from "../../modules/exmc/server/ExGameServer.js";
 import { ArmorData, ArmorPlayerDec, ArmorPlayerPom } from "./items/ArmorData.js";
@@ -11,9 +11,10 @@ import PomServer from "../../pom/server/PomServer.js";
 import GlobalScoreBoardCache from "../../modules/exmc/server/storage/cache/GlobalScoreBoardCache.js";
 import { Objective } from "../../modules/exmc/server/entity/ExScoresManager.js";
 import Random from "../../modules/exmc/utils/Random.js";
-import {  MinecraftDimensionTypes, MinecraftEffectTypes } from "../../modules/vanilla-data/lib/index.js";
+import { MinecraftDimensionTypes, MinecraftEffectTypes } from "../../modules/vanilla-data/lib/index.js";
 import DecBossBarrier from "./entities/DecBossBarrier.js";
 import ExEntity, { ExEntityShootOption } from '../../modules/exmc/server/entity/ExEntity.js';
+import ExPlayer from '../../modules/exmc/server/entity/ExPlayer.js';
 
 export default class DecClient extends ExGameClient {
     useArmor?: ArmorData;
@@ -39,7 +40,7 @@ export default class DecClient extends ExGameClient {
             }
         }
     }
-    
+
     override onJoin(): void {
         super.onJoin();
         this.exPlayer.command.runAsync('fog @s remove \"night_event\"')
@@ -99,8 +100,121 @@ export default class DecClient extends ExGameClient {
         })
 
         this.getEvents().exEvents.afterItemUse.subscribe((e) => {
-            if (e.itemStack.hasComponentById('minecraft:cooldown')) {
-                //这里写有饰品时触发的东西
+            const item = e.itemStack;
+            const player = ExPlayer.getInstance(e.source);
+            const offhandItem = player.getBag().itemOnOffHand;
+
+            // 工具函数：随机概率
+            const randomChance = (chance: number): boolean => {
+                return Math.random() < chance;
+            };
+
+            // 触发器：带冷却的饰品触发
+            const triggerWithCooldown = (
+                offhandTypeId: string,
+                chance: number,
+                cooldownCategory: string,
+                cooldownTime: number,
+                action: () => void
+            ) => {
+                if (e.source.getItemCooldown(cooldownCategory) <= 0) {
+                    if (offhandItem?.typeId === offhandTypeId && randomChance(chance)) {
+                        action();
+                        e.source.startItemCooldown(cooldownCategory, cooldownTime);
+                    }
+                }
+            };
+
+            // 耐久减少逻辑
+            const decreaseDurability = (item: ItemStack, amount: number, slot: EquipmentSlot) => {
+                const dur = item.getComponentById("minecraft:durability")!;
+                if (dur.damage + amount < dur.maxDurability) {
+                    dur.damage += amount;
+                    player.getBag().setItem(slot, item);
+                } else {
+                    e.source.playSound('random.break');
+                    if (item.amount > 1) {
+                        item.amount--;
+                        player.getBag().setItem(slot, item);
+                    } else {
+                        player.getBag().setItem(slot, undefined);
+                    }
+                }
+            };
+
+            // 饰品配置类型
+            interface AccessoryConfig {
+                typeId: string;
+                chance: number;
+                cooldownCategory: string;
+                cooldownTime: number;
+                action: () => void;
+            }
+
+            // 饰品配置列表
+            const AccessoryTriggers: AccessoryConfig[] = [
+                {
+                    typeId: 'dec:gold_ring',
+                    chance: 0.4,
+                    cooldownCategory: 'dec:ring',
+                    cooldownTime: 20,
+                    action: () => {
+                        player.shootProj('dec:golden_energy_ball', { speed: 0.8 });
+                        decreaseDurability(offhandItem!, 1, EquipmentSlot.Offhand);
+                    }
+                },
+                {
+                    typeId: 'dec:diamond_ring',
+                    chance: 0.3,
+                    cooldownCategory: 'dec:ring',
+                    cooldownTime: 24,
+                    action: () => {
+                        player.shootProj('dec:stream_energy_ball', { speed: 0.8 });
+                        player.shootProj('dec:stream_energy_ball', { speed: 0.8, delay: 0.2 });
+                        decreaseDurability(offhandItem!, 1, EquipmentSlot.Offhand);
+                    }
+                },
+                {
+                    typeId: 'dec:emerald_ring',
+                    chance: 0.2,
+                    cooldownCategory: 'dec:ring',
+                    cooldownTime: 10,
+                    action: () => {
+                        player.shootProj('dec:pure_energy_ball', { speed: 0.8 });
+                        decreaseDurability(offhandItem!, 1, EquipmentSlot.Offhand);
+                    }
+                },
+                {
+                    typeId: 'dec:heart_ring',
+                    chance: 0.2,
+                    cooldownCategory: 'dec:ring',
+                    cooldownTime: 100,
+                    action: () => {
+                        player.addHealth(this.getServer(), 4)
+                        if (randomChance(0.5)) {
+                            player.addEffect(MinecraftEffectTypes.Strength, 100, 0)
+                        }
+                        player.spawnParticleVisibleToAll('dec:blood_spore_sweep_particle', new Vector3(e.source.location))
+                        decreaseDurability(offhandItem!, 1, EquipmentSlot.Offhand);
+                    }
+                }
+                // 可以继续添加其他饰品
+            ];
+
+            if (item.hasComponentById('minecraft:cooldown')) {
+                const cooldownComponent = item.getComponent('minecraft:cooldown')!;
+                if (cooldownComponent.cooldownCategory === 'minecraft:missile') {
+                    // 遍历配置，统一处理
+                    for (const trigger of AccessoryTriggers) {
+                        triggerWithCooldown(
+                            trigger.typeId,
+                            trigger.chance,
+                            trigger.cooldownCategory,
+                            trigger.cooldownTime,
+                            trigger.action
+                        );
+                    }
+                }
             }
         });
         this.getEvents().exEvents.beforePlayerInteractWithBlock.subscribe(e => {
@@ -200,7 +314,7 @@ export default class DecClient extends ExGameClient {
                                 });
                                 e.setOnFire(5, false)
                                 let direction = tmpV.set(e.location).sub(this.player.location).normalize();
-                                e.applyKnockback({x: direction.x, z: direction.z}, 1.2);
+                                e.applyKnockback({ x: direction.x, z: direction.z }, 1.2);
                             } catch (e) { }
                         }
                         this.exPlayer.addEffect(MinecraftEffectTypes.Absorption, 1 * 20, 0);
@@ -242,7 +356,7 @@ export default class DecClient extends ExGameClient {
                                     "damagingEntity": this.player
                                 });
                                 let direction = tmpV.set(e.location).sub(this.player.location).normalize();
-                                e.applyKnockback({x: direction.x, z: direction.z}, 4);
+                                e.applyKnockback({ x: direction.x, z: direction.z }, 4);
                             } catch (e) { }
                         }
 
@@ -260,7 +374,7 @@ export default class DecClient extends ExGameClient {
                                     "damagingEntity": this.player
                                 });
                                 let direction = tmpV.set(e.location).sub(this.player.location).normalize();
-                                e.applyKnockback({x: direction.x, z: direction.z}, 3);
+                                e.applyKnockback({ x: direction.x, z: direction.z }, 3);
                             } catch (e) { }
                         }
                         this.exPlayer.command.runAsync("function armor/water");

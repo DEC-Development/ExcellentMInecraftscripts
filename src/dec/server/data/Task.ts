@@ -90,7 +90,7 @@ export let DecTasks = [
         "execute if entity @s[hasitem={location=slot.armor.head,item=dec:amethyst_helmet}] if entity @s[hasitem={location=slot.armor.chest,item=dec:amethyst_chestplate}] if entity @s[hasitem={location=slot.armor.legs,item=dec:amethyst_leggings}] if entity @s[hasitem={location=slot.armor.feet,item=dec:amethyst_boots}] run tag @s add task_complete",
     ]),
     new DecTask("004", 381, [
-        "execute if entity @s[hasitem={location=slot.armor.head,item=dec:copper_helmet}] if entity @s[hasitem={location=slot.armor.chest,item=dec:copper_chestplate}] if entity @s[hasitem={location=slot.armor.legs,item=dec:copper_leggings}] if entity @s[hasitem={location=slot.armor.feet,item=dec:copper_boots}] run tag @s add task_complete",
+        "execute if entity @s[hasitem={location=slot.armor.head,item=minecraft:copper_helmet}] if entity @s[hasitem={location=slot.armor.chest,item=minecraft:copper_chestplate}] if entity @s[hasitem={location=slot.armor.legs,item=minecraft:copper_leggings}] if entity @s[hasitem={location=slot.armor.feet,item=minecraft:copper_boots}] run tag @s add task_complete",
     ]),
     new DecTask("005", 1623, [
         "execute if entity @s[hasitem={location=slot.armor.head,item=dec:crying_helmet}] if entity @s[hasitem={location=slot.armor.chest,item=dec:crying_chestplate}] if entity @s[hasitem={location=slot.armor.legs,item=dec:crying_leggings}] if entity @s[hasitem={location=slot.armor.feet,item=dec:crying_boots}] run tag @s add task_complete",
@@ -483,8 +483,8 @@ export let DecTasks = [
         "execute if entity @s[tag=task_complete] run clear @s carrot 0 72"
     ]),
     new DecTask("101", 1241, [
-        "execute if entity @s[hasitem={item=chorus,quantity=251..}] run tag @s add task_complete",
-        "execute if entity @s[tag=task_complete] run clear @s chorus 0 251"
+        "execute if entity @s[hasitem={item=chorus_fruit,quantity=251..}] run tag @s add task_complete",
+        "execute if entity @s[tag=task_complete] run clear @s chorus_fruit 0 251"
     ]),
     new DecTask("102", 1512, [
         "execute if entity @s[hasitem={item=cooked_chicken,quantity=73..}] run tag @s add task_complete",
@@ -492,7 +492,7 @@ export let DecTasks = [
     ]),
     new DecTask("103", 1572, [
         "execute if entity @s[hasitem={item=cooked_salmon,quantity=72..}] run tag @s add task_complete",
-        "execute if entity @s[tag=task_complete] run clear @s cooked_salmon 0 72"
+        "execute if entity @s[tag=task_complete] run clear @s cooked_cod 0 72"
     ]),
     new DecTask("104", 1542, [
         "execute if entity @s[hasitem={item=cooked_cod,quantity=72..}] run tag @s add task_complete",

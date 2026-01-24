@@ -15,13 +15,14 @@ import ExGame from '../ExGame.js';
 import { falseIfError } from '../../utils/tool.js';
 import { StatusManager } from '../../../../pom/server/clientFunc/StatusManager.js';
 import { PoisonStatus } from '../../../../pom/server/clientFunc/EpicStatus';
+import { ignorn } from '../ExErrorQueue.js';
 
 export default class ExEntity implements ExCommandNativeRunner, ExTagManager {
 
     public statusManager: StatusManager = new StatusManager(this)
     public command = new ExCommand(this);
 
-    public applyStatus(id: string, dur: number){
+    public applyStatus(id: string, dur: number) {
         const newStatus = new PoisonStatus(dur);
         this.statusManager.addStatus(newStatus);
     }
@@ -239,6 +240,16 @@ export default class ExEntity implements ExCommandNativeRunner, ExTagManager {
     shootProj(id: string, option: ExEntityShootOption, shoot_dir = this.viewDirection, loc =
         new Vector3(this._entity.getHeadLocation())
             .add(this.viewDirection.scl(option.spawnDistance ?? 1.5))) {
+        if (option.delay) {
+            ExGame._runTimeout(() => {
+                this.shootProjExe(id, option, shoot_dir, loc);
+            }, option.delay * 20);
+        } else {
+            this.shootProjExe(id, option, shoot_dir, loc);
+        }
+    }
+    private shootProjExe(id: string, option: ExEntityShootOption, shoot_dir: Vector3, loc:
+        Vector3) {
         let locx = loc;
         let q = new ExEntityQuery(this.entity.dimension).at(locx);
         if (option.absPosOffset) locx.add(option.absPosOffset);
@@ -248,11 +259,11 @@ export default class ExEntity implements ExCommandNativeRunner, ExTagManager {
         if (option.rotOffset) {
             // view.add(this.relateRotate(option.rotOffset.x, option.rotOffset.y, false));
             let mat = ExEntityQuery.getFacingMatrix(this.entity.getViewDirection());
-            mat.cpy().invert().rmulVector(view);
+            mat.cpy().invert().rmulVector(view); // 转换为视角的相对坐标
             new Matrix4().idt().rotateX(option.rotOffset.x / 180 * Math.PI).rotateY(option.rotOffset.y / 180 * Math.PI).rmulVector(view);
-            mat.rmulVector(view);
+            mat.rmulVector(view); // 转换回世界坐标
         }
-        const proj = this.exDimension.spawnEntity(id, locx);
+        const proj = ignorn(() => { return this.exDimension.spawnEntity(id, locx) })
         let owner = (option.owner ?? this._entity);
         if (owner instanceof Player) {
             let tamemount = proj?.getComponent("tamemount")
@@ -284,13 +295,11 @@ export default class ExEntity implements ExCommandNativeRunner, ExTagManager {
         proj_comp.owner = owner;
         proj_comp.shouldBounceOnHit = option.shouldBounceOnHit ?? proj_comp.shouldBounceOnHit
         proj_comp.stopOnHit = option.stopOnHit ?? proj_comp.stopOnHit
-        let v = new Vector3(view)
-        if (option.delay) {
-            console.warn('after2:'+proj_comp.owner.nameTag)
-            proj_comp.shoot(view.normalize().scl(0.05), shootOpt);
+        if (option.delayAfterSpawn) {
+            proj_comp.shoot(view.normalize().scl(option.delayAfterSpawnSpeedMutiple ?? 0.05), shootOpt);
             ExGame._runTimeout(() => {
                 if (falseIfError(() => proj.isValid)) proj_comp.shoot(view.normalize().scl(option.speed), shootOpt);
-            }, option.delay * 20);
+            }, option.delayAfterSpawn * 20);
         } else {
             proj_comp.shoot(view.normalize().scl(option.speed), shootOpt);
         }
@@ -320,13 +329,31 @@ export default class ExEntity implements ExCommandNativeRunner, ExTagManager {
     getMarkVariant() {
         return this.getComponent("minecraft:variant")?.value ?? 0;
     }
+    faceLocation(loc: Vector3) {
+        // 计算从实体位置到目标位置的方向向量
+        const direction = loc.cpy().sub(this.position);
 
-    
+        // 计算水平距离
+        const horizontalDistance = Math.sqrt(direction.x ** 2 + direction.z ** 2);
+
+        // 计算俯仰角（pitch）和偏航角（yaw）
+        const pitch = Math.atan2(-direction.y, horizontalDistance) * 180 / Math.PI;
+        const yaw = Math.atan2(direction.z, direction.x) * 180 / Math.PI - 90;
+
+        // 使用rotation setter设置实体朝向
+        this.rotation = new Vector2(pitch, yaw);
+    }
+
+
 }
 /**
  * 实体射击选项
  */
 export interface ExEntityShootOption {
+    /**
+     * 速度
+     */
+    speed: number;
     /**
      * 不确定性
      */
@@ -388,10 +415,6 @@ export interface ExEntityShootOption {
      */
     stopOnHit?: boolean;
     /**
-     * 速度
-     */
-    speed: number;
-    /**
      * 绝对位置偏移
      */
     absPosOffset?: Vector3;
@@ -410,4 +433,6 @@ export interface ExEntityShootOption {
 
     facing?: boolean;
     delay?: number;
+    delayAfterSpawn?: number
+    delayAfterSpawnSpeedMutiple?: number;
 }

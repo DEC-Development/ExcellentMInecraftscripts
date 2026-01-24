@@ -124,5 +124,8 @@ export default class ExPlayer extends ExEntity {
     stopCameraShake() {
         this.command.run(`camerashake stop`);
     }
+    spawnParticleVisibleToAll(particle: string, pos: Vector3) {
+        this.command.run(`particle ${particle} ${pos.x} ${pos.y} ${pos.z}`);
+    }
 
 }
