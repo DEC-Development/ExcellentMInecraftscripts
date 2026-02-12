@@ -47,6 +47,8 @@ let exOtherEventNameMap = {
     "afterPlayerHurt": "afterPlayerHurt",
     "afterPlayerHitBlock": "afterPlayerHitBlock",
     "afterPlayerHitEntity": "afterPlayerHitEntity",
+    "afterPlayerMeleeHitEntity": "afterPlayerMeleeHitEntity",
+    "afterPlayerUseItem": "afterPlayerUseItem",
     "afterItemOnHandChange": "afterItemOnHandChange",
     "afterOnHurt": "afterOnHurt",
     "afterPlayerShootProj": "afterPlayerShootProj"

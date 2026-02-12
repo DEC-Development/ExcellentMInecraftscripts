@@ -1,5 +1,5 @@
 import ExGameClient from "../ExGameClient.js";
-import { PlayerBreakBlockAfterEvent, ChatSendAfterEvent, ChatSendBeforeEvent, EffectAddAfterEvent, EntityHealthChangedAfterEvent, EntityHitBlockAfterEvent, EntityHurtAfterEvent, ItemReleaseUseAfterEvent, ItemStopUseAfterEvent, ItemUseAfterEvent, ItemUseBeforeEvent, PlayerSpawnAfterEvent, ItemUseOnEvent, PlayerInteractWithBlockBeforeEvent, PlayerInteractWithEntityBeforeEvent, EffectAddBeforeEvent } from '@minecraft/server';
+import { PlayerBreakBlockAfterEvent, ChatSendAfterEvent, ChatSendBeforeEvent, EffectAddAfterEvent, EntityHealthChangedAfterEvent, EntityHitBlockAfterEvent, EntityHitEntityAfterEvent, EntityHurtAfterEvent, ItemReleaseUseAfterEvent, ItemStopUseAfterEvent, ItemUseAfterEvent, ItemUseBeforeEvent, PlayerSpawnAfterEvent, ItemUseOnEvent, PlayerInteractWithBlockBeforeEvent, PlayerInteractWithEntityBeforeEvent, EffectAddBeforeEvent } from '@minecraft/server';
 import ExEventManager from "../../interface/ExEventManager.js";
 import ExGameServer from '../ExGameServer.js';
 import { Player, ItemStack, Entity } from '@minecraft/server';
@@ -128,6 +128,20 @@ export default class ExClientEvents implements ExEventManager {
                 "name": "damageSource.damagingEntity"
             },
             name: ExEventNames.afterEntityHurt
+        },
+        [ExOtherEventNames.afterPlayerMeleeHitEntity]: {
+            pattern: ExClientEvents.eventHandlers.registerToServerByEntity,
+            filter: {
+                "name": "damagingEntity"
+            },
+            name: ExEventNames.afterEntityHitEntity
+        },
+        [ExOtherEventNames.afterPlayerUseItem]: {
+            pattern: ExClientEvents.eventHandlers.registerToServerByEntity,
+            filter: {
+                "name": "source"
+            },
+            name: ExEventNames.afterItemUse
         },
         [ExOtherEventNames.afterPlayerHurt]: {
             pattern: ExClientEvents.eventHandlers.registerToServerByEntity,
@@ -273,6 +287,8 @@ export default class ExClientEvents implements ExEventManager {
         [ExOtherEventNames.beforeOncePlayerInteractWithBlock]: new Listener<PlayerInteractWithBlockBeforeEvent>(this, ExOtherEventNames.beforeOncePlayerInteractWithBlock),
         [ExOtherEventNames.afterPlayerHitBlock]: new Listener<EntityHitBlockAfterEvent>(this, ExOtherEventNames.afterPlayerHitBlock),
         [ExOtherEventNames.afterPlayerHitEntity]: new Listener<EntityHurtAfterEvent>(this, ExOtherEventNames.afterPlayerHitEntity),
+        [ExOtherEventNames.afterPlayerMeleeHitEntity]: new Listener<EntityHitEntityAfterEvent>(this, ExOtherEventNames.afterPlayerMeleeHitEntity),
+        [ExOtherEventNames.afterPlayerUseItem]: new Listener<ItemUseAfterEvent>(this, ExOtherEventNames.afterPlayerUseItem),
         [ExOtherEventNames.afterPlayerHurt]: new Listener<EntityHurtAfterEvent>(this, ExOtherEventNames.afterPlayerHurt),
         [ExOtherEventNames.afterItemOnHandChange]: new CallBackListener<ItemOnHandChangeEvent, ItemStack | void>(this, ExOtherEventNames.afterItemOnHandChange),
         [ExOtherEventNames.afterPlayerShootProj]: new Listener<PlayerShootProjectileEvent>(this, ExOtherEventNames.afterPlayerShootProj),
